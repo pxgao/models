@@ -457,11 +457,15 @@ def batch_inputs(dataset, batch_size, train, num_preprocess_threads=None,
     # 1 image uses 299*299*3*4 bytes = 1MB
     # The default input_queue_memory_factor is 16 implying a shuffling queue
     # size: examples_per_shard * 16 * 1MB = 17.6GB
-    min_queue_examples = examples_per_shard * FLAGS.input_queue_memory_factor
+
+    #Expanding the queue so it can fill during the experiment
+    #All input_queue_memory_factory is number of shards? Not clear may need to change this constant
+    min_capacity = examples_per_shard * 800
+    min_remaining_after_dequeue = examples_per_shard * FLAGS.input_queue_memory_factor
     if train:
       examples_queue = tf.RandomShuffleQueue(
-          capacity=min_queue_examples + 3 * batch_size,
-          min_after_dequeue=min_queue_examples,
+          capacity=min_capacity + 3 * batch_size,
+          min_after_dequeue=min_remaining_after_dequeue,
           dtypes=[tf.string])
     else:
       examples_queue = tf.FIFOQueue(

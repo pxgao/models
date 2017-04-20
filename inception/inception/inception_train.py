@@ -328,6 +328,14 @@ def train(dataset):
 
     # Start the queue runners.
     tf.train.start_queue_runners(sess=sess)
+    #Allow time for the the queues to fill up with training examples
+    print('LOGGING WARNING: Starting the queue runner')
+    queue_size = sess.run("batch/fifo_queue_Size:0")
+    print('The current queue size is %.3f' % queue_size)
+    time.sleep(120)
+    queue_size = sess.run("batch/fifo_queue_Size:0")
+    print('LOGGING WARNING: Waking up after 60 seconds of filling in the queue')
+    print('The current queue size is %.3f' % queue_size)
 
     summary_writer = tf.train.SummaryWriter(
         FLAGS.train_dir,
@@ -340,11 +348,10 @@ def train(dataset):
 
       assert not np.isnan(loss_value), 'Model diverged with loss = NaN'
 
-      if step % 10 == 0:
-        examples_per_sec = FLAGS.batch_size / float(duration)
-        format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
-                      'sec/batch)')
-        print(format_str % (datetime.now(), step, loss_value,
+      examples_per_sec = FLAGS.batch_size / float(duration)
+      format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
+                    'sec/batch)')
+      print(format_str % (datetime.now(), step, loss_value,
                             examples_per_sec, duration))
 
       if step % 100 == 0:
