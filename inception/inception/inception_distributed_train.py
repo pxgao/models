@@ -133,14 +133,14 @@ def train(target, dataset, cluster_spec):
                                       FLAGS.learning_rate_decay_factor,
                                       staircase=True)
       # Add a summary to track the learning rate.
-      tf.scalar_summary('learning_rate', lr)
+      #tf.scalar_summary('learning_rate', lr)
 
       # Create an optimizer that performs gradient descent.
       opt = tf.train.RMSPropOptimizer(lr,
                                       RMSPROP_DECAY,
                                       momentum=RMSPROP_MOMENTUM,
                                       epsilon=RMSPROP_EPSILON)
-
+      
       images, labels = image_processing.distorted_inputs(
           dataset,
           batch_size=FLAGS.batch_size,
@@ -148,79 +148,98 @@ def train(target, dataset, cluster_spec):
 
       # Number of classes in the Dataset label set plus 1.
       # Label 0 is reserved for an (unused) background class.
+      # Do we actually need this??
       num_classes = dataset.num_classes() + 1
       logits = inception.inference(images, num_classes, for_training=True)
       # Add classification loss.
-      inception.loss(logits, labels)
+      #inception.loss(logits, labels)
 
       # Gather all of the losses including regularization losses.
-      losses = tf.get_collection(slim.losses.LOSSES_COLLECTION)
-      losses += tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+      #losses = tf.get_collection(slim.losses.LOSSES_COLLECTION)
+      #losses += tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
 
-      total_loss = tf.add_n(losses, name='total_loss')
+      #total_loss = tf.add_n(losses, name='total_loss')
 
-      if is_chief:
+      #if is_chief:
         # Compute the moving average of all individual losses and the
         # total loss.
-        loss_averages = tf.train.ExponentialMovingAverage(0.9, name='avg')
-        loss_averages_op = loss_averages.apply(losses + [total_loss])
+        #loss_averages = tf.train.ExponentialMovingAverage(0.9, name='avg')
+        #loss_averages_op = loss_averages.apply(losses + [total_loss])
 
         # Attach a scalar summmary to all individual losses and the total loss;
         # do the same for the averaged version of the losses.
-        for l in losses + [total_loss]:
-          loss_name = l.op.name
+        #for l in losses + [total_loss]:
+        #  loss_name = l.op.name
           # Name each loss as '(raw)' and name the moving average version of the
           # loss as the original loss name.
-          tf.scalar_summary(loss_name + ' (raw)', l)
-          tf.scalar_summary(loss_name, loss_averages.average(l))
+          #tf.scalar_summary(loss_name + ' (raw)', l)
+          #tf.scalar_summary(loss_name, loss_averages.average(l))
 
         # Add dependency to compute loss_averages.
-        with tf.control_dependencies([loss_averages_op]):
-          total_loss = tf.identity(total_loss)
+        #with tf.control_dependencies([loss_averages_op]):
+          #total_loss = tf.identity(total_loss)
 
+      #Shit gets real here!!
+          
       # Track the moving averages of all trainable variables.
       # Note that we maintain a 'double-average' of the BatchNormalization
       # global statistics.
       # This is not needed when the number of replicas are small but important
       # for synchronous distributed training with tens of workers/replicas.
-      exp_moving_averager = tf.train.ExponentialMovingAverage(
-          inception.MOVING_AVERAGE_DECAY, global_step)
+      #exp_moving_averager = tf.train.ExponentialMovingAverage(
+      #    inception.MOVING_AVERAGE_DECAY, global_step)
 
-      variables_to_average = (
-          tf.trainable_variables() + tf.moving_average_variables())
+      #variables_to_average = (tf.trainable_variables())
+      #tf.trainable_variables() + tf.moving_average_variables())
 
       # Add histograms for model variables.
-      for var in variables_to_average:
-        tf.histogram_summary(var.op.name, var)
+      #for var in variables_to_average:
+      #  tf.histogram_summary(var.op.name, var)
 
       # Create synchronous replica optimizer.
       opt = tf.train.SyncReplicasOptimizer(
           opt,
           replicas_to_aggregate=num_replicas_to_aggregate,
           replica_id=FLAGS.task_id,
-          total_num_replicas=num_workers,
-          variable_averages=exp_moving_averager,
-          variables_to_average=variables_to_average)
+          total_num_replicas=num_workers)
+          #variable_averages=exp_moving_averager,
+          #variables_to_average=variables_to_average)
 
-      batchnorm_updates = tf.get_collection(slim.ops.UPDATE_OPS_COLLECTION)
-      assert batchnorm_updates, 'Batchnorm updates are missing'
-      batchnorm_updates_op = tf.group(*batchnorm_updates)
+      #Do not need batchnorm updates for serialization test!
+      #batchnorm_updates = tf.get_collection(slim.ops.UPDATE_OPS_COLLECTION)
+      #assert batchnorm_updates, 'Batchnorm updates are missing'
+      #batchnorm_updates_op = tf.group(*batchnorm_updates)
       # Add dependency to compute batchnorm_updates.
-      with tf.control_dependencies([batchnorm_updates_op]):
-        total_loss = tf.identity(total_loss)
+      #with tf.control_dependencies([batchnorm_updates_op]):
+      #  total_loss = tf.identity(total_loss)
 
       # Compute gradients with respect to the loss.
-      grads = opt.compute_gradients(total_loss)
+      #grads = opt.compute_gradients(total_loss)
+
+      #Instead of computing gradient, just create a random tensor
+      # We execute this in lieu of compute gradients.
+      #Returns a list of (gradient, variable) pairs
+      grads = []
+      trainable_variables = tf.trainable_variables()
+      for variable in trainable_variables:
+        tf.logging.info('Variable is {}'.format(variable))
+        shape = variable.get_shape()
+        gradient = tf.random_normal(shape)
+        #gradient = tf.random_normal([300, 500, 3])
+        entry = (gradient, variable)
+        grads.append(entry)
 
       # Add histograms for gradients.
-      for grad, var in grads:
-        if grad is not None:
-          tf.histogram_summary(var.op.name + '/gradients', grad)
+      #for grad, var in grads:
+      #  if grad is not None:
+      #    tf.histogram_summary(var.op.name + '/gradients', grad)
 
+      #This is probably where the gradients are applied across the workers?
       apply_gradients_op = opt.apply_gradients(grads, global_step=global_step)
 
-      with tf.control_dependencies([apply_gradients_op]):
-        train_op = tf.identity(total_loss, name='train_op')
+      #Ensures that all the gradients are applied before total loss is calculated
+      #with tf.control_dependencies([apply_gradients_op]):
+      #  train_op = tf.identity(total_loss, name='train_op')
 
       # Get chief queue_runners, init_tokens and clean_up_op, which is used to
       # synchronize replicas.
@@ -233,7 +252,7 @@ def train(target, dataset, cluster_spec):
       saver = tf.train.Saver()
 
       # Build the summary operation based on the TF collection of Summaries.
-      summary_op = tf.merge_all_summaries()
+      #summary_op = tf.merge_all_summaries()
 
       # Build an initialization operation to run below.
       init_op = tf.initialize_all_variables()
@@ -269,6 +288,9 @@ def train(target, dataset, cluster_spec):
         sv.start_queue_runners(sess, chief_queue_runners)
         sess.run(init_tokens_op)
 
+      #Ensure that queue loading is not a factor
+      time.sleep(30)
+
       # Train, checking for Nans. Concurrently run the summary operation at a
       # specified interval. Note that the summary_op and train_op never run
       # simultaneously in order to prevent running out of GPU memory.
@@ -276,13 +298,16 @@ def train(target, dataset, cluster_spec):
       while not sv.should_stop():
         try:
           start_time = time.time()
-          loss_value, step = sess.run([train_op, global_step])
-          assert not np.isnan(loss_value), 'Model diverged with loss = NaN'
+          tf.logging.info('About to run the session')
+          loss_value, step = sess.run([apply_gradients_op, global_step])
+          tf.logging.info('Session is running')
+          #loss_value, step = sess.run([train_op, global_step])
+          #assert not np.isnan(loss_value), 'Model diverged with loss = NaN'
           if step > FLAGS.max_steps:
             break
           duration = time.time() - start_time
 
-          if step % 30 == 0:
+          if step % 5 == 0:
             examples_per_sec = FLAGS.batch_size / float(duration)
             format_str = ('Worker %d: %s: step %d, loss = %.2f'
                           '(%.1f examples/sec; %.3f  sec/batch)')
@@ -303,6 +328,8 @@ def train(target, dataset, cluster_spec):
           if is_chief:
             tf.logging.info('About to execute sync_clean_up_op!')
             sess.run(clean_up_op)
+          import sys
+          tf.logging.info('Unexpected error:', sys.exc_info()[0])
           raise
 
       # Stop the supervisor.  This also waits for service threads to finish.
