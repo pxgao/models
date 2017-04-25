@@ -24,6 +24,7 @@ import tensorflow as tf
 
 from inception.slim import ops
 from inception.slim import scopes
+from inception.slim import variables
 
 #Returns a list of logists and aux_logits tensors
 def param_model(inputs,
@@ -37,15 +38,20 @@ def param_model(inputs,
 
   end_points = {}
   with tf.op_scope([inputs], scope, 'param_model'):
-    #Create layers number of layers
-    for layer in range(layers):
-      # mixed: 35 x 35 x 256.
-      with tf.variable_scope('layer_{}'.format(layer)):
-        with tf.variable_scope('branch_0'):
-          end_points['random_{}'.format(layer)] = tf.zeros(random_shape, tf.float32)
-    logits_size = [num_classes, 1]
+    with scopes.arg_scope([ops.conv2d], is_training=is_training):
+      #Create layers number of layers
+      for layer in range(layers):
+        # mixed: 35 x 35 x 256
+        with tf.variable_scope('layer_{}'.format(layer)):
+          with tf.variable_scope('branch_0'):
+            weights = variables.variable('layer{}'.format(layer),
+                                        shape=random_shape,
+                                         trainable=True)
+            #end_points['test'] = ops.conv2d(inputs, 32, [3,3], stride=2, scope='conv0')
+            #end_points['random_{}'.format(layer)] = tf.zeros(random_shape, tf.float32)
+    logits_size = [32, 1]
     logits = tf.zeros(logits_size, tf.float32)
-    endpoints['logits'] = logits
+    end_points['logits'] = logits
 
   return logits, end_points
 

@@ -85,14 +85,14 @@ def inference(images, num_classes, for_training=False, restore_logits=True,
       #    is_training=for_training,
       #    restore_logits=restore_logits,
       #    scope=scope)
-      logits, endpoints = slim.param_model(inputs,
+      logits, endpoints = slim.param_model.param_model(images,
                 dropout_keep_prop=0.8,
                 num_classes=1000,
                 is_training=True,
                 restore_logits=True,
                 scope='',
                 layers=1,
-                random_shape=[2000, 2000, 2000]):
+                random_shape=[2000, 2000, 2000])
     
 
   # Add summaries for viewing model statistics on TensorBoard.
