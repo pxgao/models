@@ -140,11 +140,12 @@ def train(target, dataset, cluster_spec):
       num_classes = dataset.num_classes() + 1
       logits = inception.inference(images, num_classes, for_training=True)
       # Add classification loss.
-      inception.loss(logits, labels)
+      #inception.loss(logits, labels)
 
       # Gather all of the losses including regularization losses.
-      losses = tf.get_collection(slim.losses.LOSSES_COLLECTION)
-      total_loss = tf.add_n(losses, name='total_loss')
+      #losses = tf.get_collection(slim.losses.LOSSES_COLLECTION)
+      #tf.logging.info('LOSSES IS {}'.format(losses))
+      #total_loss = tf.add_n(losses, name='total_loss')
 
       # Create synchronous replica optimizer.
       opt = tf.train.SyncReplicasOptimizer(
@@ -167,11 +168,11 @@ def train(target, dataset, cluster_spec):
 
       apply_gradients_op = opt.apply_gradients(grads, global_step=global_step)
 
-      #with tf.control_dependencies([apply_gradients_op]):
-      #  train_op = tf.identity(apply_gradients_op, name='train_op')
-      #Ensures that all the gradients are applied before total loss is calculated
       with tf.control_dependencies([apply_gradients_op]):
-        train_op = tf.identity(total_loss, name='train_op')
+        train_op = tf.identity(apply_gradients_op, name='train_op')
+      #Ensures that all the gradients are applied before total loss is calculated
+      #with tf.control_dependencies([apply_gradients_op]):
+      #  train_op = tf.identity(total_loss, name='train_op')
 
       # Get chief queue_runners, init_tokens and clean_up_op, which is used to
       # synchronize replicas.
