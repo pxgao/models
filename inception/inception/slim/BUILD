@@ -74,7 +74,7 @@ py_test(
 
 py_library(
     name = "inception",
-    srcs = ["inception_model.py"],
+    srcs = ["inception_model.py", "param_model.py"],
     deps = [
         ":ops",
         ":scopes",
