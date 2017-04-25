@@ -91,8 +91,7 @@ def inference(images, num_classes, for_training=False, restore_logits=True,
                 is_training=True,
                 restore_logits=True,
                 scope='',
-                layers=1,
-                random_shape=[2000, 2000, 2000])
+                layers=1)
     
 
   # Add summaries for viewing model statistics on TensorBoard.
@@ -119,29 +118,10 @@ def loss(logits, labels, batch_size=None):
   """
   if not batch_size:
     batch_size = FLAGS.batch_size
-
-  # Reshape the labels into a dense Tensor of
-  # shape [FLAGS.batch_size, num_classes].
-  sparse_labels = tf.reshape(labels, [batch_size, 1])
-  indices = tf.reshape(tf.range(batch_size), [batch_size, 1])
-  concated = tf.concat(1, [indices, sparse_labels])
-  num_classes = logits[0].get_shape()[-1].value
-  dense_labels = tf.sparse_to_dense(concated,
-                                    [batch_size, num_classes],
-                                    1.0, 0.0)
-
-  # Cross entropy loss for the main softmax prediction.
-  slim.losses.cross_entropy_loss(logits[0],
-                                 dense_labels,
-                                 label_smoothing=0.1,
-                                 weight=1.0)
-
-  # Cross entropy loss for the auxiliary softmax head.
-  slim.losses.cross_entropy_loss(logits[1],
-                                 dense_labels,
-                                 label_smoothing=0.1,
-                                 weight=0.4,
-                                 scope='aux_loss')
+  
+  #Calculate some arbitrary loss function
+  loss = tf.zeros([100,1])
+  tf.add_to_collection(LOSSES_COLLECTION, loss)
 
 
 def _activation_summary(x):
