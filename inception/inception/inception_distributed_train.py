@@ -143,45 +143,12 @@ def train(target, dataset, cluster_spec):
       inception.loss(logits, labels)
 
       # Gather all of the losses including regularization losses.
-      total_loss = tf.get_collection(slim.losses.LOSSES_COLLECTION)
+      losses = tf.get_collection(slim.losses.LOSSES_COLLECTION)
+      tf.logging.info('total loss before add n is '.format(losses))
       #losses += tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
 
-      #total_loss = tf.add_n(losses, name='total_loss')
-
-      #if is_chief:
-        # Compute the moving average of all individual losses and the
-        # total loss.
-        #loss_averages = tf.train.ExponentialMovingAverage(0.9, name='avg')
-        #loss_averages_op = loss_averages.apply(losses + [total_loss])
-
-        # Attach a scalar summmary to all individual losses and the total loss;
-        # do the same for the averaged version of the losses.
-        #for l in losses + [total_loss]:
-        #  loss_name = l.op.name
-        #  # Name each loss as '(raw)' and name the moving average version of the
-        #  # loss as the original loss name.
-        #tf.scalar_summary(loss_name + ' (raw)', l)
-        #  tf.scalar_summary(loss_name, loss_averages.average(l))
-
-        # Add dependency to compute loss_averages.
-        #with tf.control_dependencies([loss_averages_op]):
-        #  total_loss = tf.identity(total_loss)
-
-      #Shit gets real here!!
-          
-      # Track the moving averages of all trainable variables.
-      # Note that we maintain a 'double-average' of the BatchNormalization
-      # global statistics.
-      # This is not needed when the number of replicas are small but important
-      # for synchronous distributed training with tens of workers/replicas.
-      exp_moving_averager = tf.train.ExponentialMovingAverage(
-          inception.MOVING_AVERAGE_DECAY, global_step)
-
-      #variables_to_average = (tf.trainable_variables() + tf.moving_average_variables())
-
-      # Add histograms for model variables.
-      #for var in variables_to_average:
-      #  tf.histogram_summary(var.op.name, var)
+      total_loss = tf.add_n(losses, name='total_loss')
+      tf.logging.info('total loss after add n is '.format(total_loss))
 
       # Create synchronous replica optimizer.
       opt = tf.train.SyncReplicasOptimizer(
@@ -189,17 +156,6 @@ def train(target, dataset, cluster_spec):
           replicas_to_aggregate=num_replicas_to_aggregate,
           replica_id=FLAGS.task_id,
           total_num_replicas=num_workers)
-
-      #Do not need batchnorm updates for serialization test!
-      #batchnorm_updates = tf.get_collection(slim.ops.UPDATE_OPS_COLLECTION)
-      #assert batchnorm_updates, 'Batchnorm updates are missing'
-      #batchnorm_updates_op = tf.group(*batchnorm_updates)
-      # Add dependency to compute batchnorm_updates.
-      #with tf.control_dependencies([batchnorm_updates_op]):
-      #  total_loss = tf.identity(total_loss)
-
-      # Compute gradients with respect to the loss.
-      #grads = opt.compute_gradients(total_loss)
 
       #Instead of computing gradient, just create a random tensor
       # We execute this in lieu of compute gradients.
