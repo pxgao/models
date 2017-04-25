@@ -225,7 +225,6 @@ def train(target, dataset, cluster_spec):
         tf.logging.info('Variable is {}'.format(variable))
         shape = variable.get_shape()
         gradient = tf.random_normal(shape)
-        #gradient = tf.random_normal([300, 500, 3])
         entry = (gradient, variable)
         grads.append(entry)
 
@@ -234,9 +233,10 @@ def train(target, dataset, cluster_spec):
       #  if grad is not None:
       #    tf.histogram_summary(var.op.name + '/gradients', grad)
 
-      #This is probably where the gradients are applied across the workers?
       apply_gradients_op = opt.apply_gradients(grads, global_step=global_step)
 
+      with tf.control_dependencies([apply_gradients_op]):
+        train_op = tf.identity(apply_gradients_op, name='train_op')
       #Ensures that all the gradients are applied before total loss is calculated
       #with tf.control_dependencies([apply_gradients_op]):
       #  train_op = tf.identity(total_loss, name='train_op')
@@ -298,10 +298,8 @@ def train(target, dataset, cluster_spec):
       while not sv.should_stop():
         try:
           start_time = time.time()
-          tf.logging.info('About to run the session')
-          loss_value, step = sess.run([apply_gradients_op, global_step])
-          tf.logging.info('Session is running')
-          #loss_value, step = sess.run([train_op, global_step])
+          #loss_value, step = sess.run([apply_gradients_op, global_step])
+          loss_value, step = sess.run([train_op, global_step])
           #assert not np.isnan(loss_value), 'Model diverged with loss = NaN'
           if step > FLAGS.max_steps:
             break
