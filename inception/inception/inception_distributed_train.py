@@ -174,11 +174,10 @@ def train(target, dataset, cluster_spec):
       # global statistics.
       # This is not needed when the number of replicas are small but important
       # for synchronous distributed training with tens of workers/replicas.
-      #exp_moving_averager = tf.train.ExponentialMovingAverage(
-      #    inception.MOVING_AVERAGE_DECAY, global_step)
+      exp_moving_averager = tf.train.ExponentialMovingAverage(
+          inception.MOVING_AVERAGE_DECAY, global_step)
 
-      #variables_to_average = (tf.trainable_variables())
-      #tf.trainable_variables() + tf.moving_average_variables())
+      variables_to_average = (tf.trainable_variables() + tf.moving_average_variables())
 
       # Add histograms for model variables.
       #for var in variables_to_average:
