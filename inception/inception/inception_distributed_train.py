@@ -140,12 +140,12 @@ def train(target, dataset, cluster_spec):
       num_classes = dataset.num_classes() + 1
       logits = inception.inference(images, num_classes, for_training=True)
       # Add classification loss.
-      #inception.loss(logits, labels)
+      inception.loss(logits, labels)
 
       # Gather all of the losses including regularization losses.
-      #losses = tf.get_collection(slim.losses.LOSSES_COLLECTION)
-      #tf.logging.info('LOSSES IS {}'.format(losses))
-      #total_loss = tf.add_n(losses, name='total_loss')
+      losses = tf.get_collection(slim.losses.LOSSES_COLLECTION)
+      tf.logging.info('LOSSES IS {}'.format(losses))
+      total_loss = tf.add_n(losses, name='total_loss')
 
       # Create synchronous replica optimizer.
       opt = tf.train.SyncReplicasOptimizer(

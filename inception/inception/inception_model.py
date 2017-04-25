@@ -44,6 +44,7 @@ BATCHNORM_MOVING_AVERAGE_DECAY = 0.9997
 # The decay to use for the moving average.
 MOVING_AVERAGE_DECAY = 0.9999
 
+LOSSES_COLLECTION = '_losses'
 
 def inference(images, num_classes, for_training=False, restore_logits=True,
               scope=None):
@@ -119,9 +120,12 @@ def loss(logits, labels, batch_size=None):
   if not batch_size:
     batch_size = FLAGS.batch_size
   
-  #Calculate some arbitrary loss function
-  loss = tf.zeros([100,1])
+  #Create some tensor with an arbitrary loss function
+  loss1 = tf.zeros([100,1])
   tf.add_to_collection(LOSSES_COLLECTION, loss)
+
+  loss2 = tf.ones([100,1])
+  tf.add_to_collection(LOSSES_COLLECTION,loss)
 
 
 def _activation_summary(x):
