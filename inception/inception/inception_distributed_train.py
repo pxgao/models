@@ -218,8 +218,8 @@ def train(target, dataset, cluster_spec):
       with tf.control_dependencies([apply_gradients_op]):
         train_op = tf.identity(apply_gradients_op, name='train_op')
       #Ensures that all the gradients are applied before total loss is calculated
-      #with tf.control_dependencies([apply_gradients_op]):
-      #  train_op = tf.identity(total_loss, name='train_op')
+      with tf.control_dependencies([apply_gradients_op]):
+        train_op = tf.identity(total_loss, name='train_op')
 
       # Get chief queue_runners, init_tokens and clean_up_op, which is used to
       # synchronize replicas.
