@@ -143,10 +143,10 @@ def train(target, dataset, cluster_spec):
       inception.loss(logits, labels)
 
       # Gather all of the losses including regularization losses.
-      losses = tf.get_collection(slim.losses.LOSSES_COLLECTION)
-      losses += tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+      total_loss = tf.get_collection(slim.losses.LOSSES_COLLECTION)
+      #losses += tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
 
-      total_loss = tf.add_n(losses, name='total_loss')
+      #total_loss = tf.add_n(losses, name='total_loss')
 
       #if is_chief:
         # Compute the moving average of all individual losses and the
@@ -174,10 +174,10 @@ def train(target, dataset, cluster_spec):
       # global statistics.
       # This is not needed when the number of replicas are small but important
       # for synchronous distributed training with tens of workers/replicas.
-      exp_moving_averager = tf.train.ExponentialMovingAverage(
-          inception.MOVING_AVERAGE_DECAY, global_step)
+      #exp_moving_averager = tf.train.ExponentialMovingAverage(
+      #    inception.MOVING_AVERAGE_DECAY, global_step)
 
-      variables_to_average = (tf.trainable_variables() + tf.moving_average_variables())
+      #variables_to_average = (tf.trainable_variables() + tf.moving_average_variables())
 
       # Add histograms for model variables.
       #for var in variables_to_average:
@@ -215,8 +215,8 @@ def train(target, dataset, cluster_spec):
 
       apply_gradients_op = opt.apply_gradients(grads, global_step=global_step)
 
-      with tf.control_dependencies([apply_gradients_op]):
-        train_op = tf.identity(apply_gradients_op, name='train_op')
+      #with tf.control_dependencies([apply_gradients_op]):
+      #  train_op = tf.identity(apply_gradients_op, name='train_op')
       #Ensures that all the gradients are applied before total loss is calculated
       with tf.control_dependencies([apply_gradients_op]):
         train_op = tf.identity(total_loss, name='train_op')
