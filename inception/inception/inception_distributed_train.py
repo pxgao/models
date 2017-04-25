@@ -211,15 +211,15 @@ def train(target, dataset, cluster_spec):
         total_loss = tf.identity(total_loss)
 
       # Compute gradients with respect to the loss.
-      #grads = opt.compute_gradients(total_loss)
-      grads = []
-      trainable_variables = tf.trainable_variables()
-      for variable in trainable_variables:
-        tf.logging.info('Variable is {}'.format(variable))
-        shape = variable.get_shape()
-        gradient = tf.random_normal(shape)
-        entry = (gradient, variable)
-        grads.append(entry)
+      grads = opt.compute_gradients(total_loss)
+      #grads = []
+      #trainable_variables = tf.trainable_variables()
+      #for variable in trainable_variables:
+      #  tf.logging.info('Variable is {}'.format(variable))
+      #  shape = variable.get_shape()
+      #  gradient = tf.random_normal(shape)
+      #  entry = (gradient, variable)
+      #  grads.append(entry)
 
       # Add histograms for gradients.
       for grad, var in grads:
