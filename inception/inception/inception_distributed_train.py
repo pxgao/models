@@ -168,11 +168,11 @@ def train(target, dataset, cluster_spec):
 
       apply_gradients_op = opt.apply_gradients(grads, global_step=global_step)
 
-      with tf.control_dependencies([apply_gradients_op]):
-        train_op = tf.identity(apply_gradients_op, name='train_op')
+      # with tf.control_dependencies([apply_gradients_op]):
+      #  train_op = tf.identity(apply_gradients_op, name='train_op')
       #Ensures that all the gradients are applied before total loss is calculated
-      #with tf.control_dependencies([apply_gradients_op]):
-      #  train_op = tf.identity(total_loss, name='train_op')
+      with tf.control_dependencies([apply_gradients_op]):
+        train_op = tf.identity(total_loss, name='train_op')
 
       # Get chief queue_runners, init_tokens and clean_up_op, which is used to
       # synchronize replicas.
@@ -222,7 +222,7 @@ def train(target, dataset, cluster_spec):
         sess.run(init_tokens_op)
 
       #Ensure that queue loading is not a factor
-      time.sleep(30)
+      time.sleep(10)
 
       # Train, checking for Nans. Concurrently run the summary operation at a
       # specified interval. Note that the summary_op and train_op never run
