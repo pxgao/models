@@ -109,7 +109,7 @@ def loss(logits, labels, batch_size=None):
   if not batch_size:
     batch_size = FLAGS.batch_size
 
-  with tf.op_scope([logits, labels], scope, 'Dummyloss'):
+  with tf.op_scope([logits, labels], 'random', 'Dummyloss'):
     #Create some tensor with an arbitrary loss function
     loss1 = tf.ones([100,1])
     tf.add_to_collection(LOSSES_COLLECTION, loss1)

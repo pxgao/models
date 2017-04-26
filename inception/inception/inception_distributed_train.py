@@ -145,6 +145,7 @@ def train(target, dataset, cluster_spec):
       # Gather all of the losses including regularization losses.
       losses = tf.get_collection(slim.losses.LOSSES_COLLECTION)
       total_loss = tf.add_n(losses, name='total_loss')
+      tf.logging.info('Total loss measured {}'.format(total_loss))
 
       # Create synchronous replica optimizer.
       opt = tf.train.SyncReplicasOptimizer(
