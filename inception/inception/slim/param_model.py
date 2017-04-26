@@ -59,13 +59,11 @@ def param_model(inputs,
 def inception_v3_parameters(weight_decay=0.00004, stddev=0.1,
                             batch_norm_decay=0.9997, batch_norm_epsilon=0.001):
   """Yields the scope with the default parameters for inception_v3.
-
   Args:
     weight_decay: the weight decay for weights variables.
     stddev: standard deviation of the truncated guassian weight distribution.
     batch_norm_decay: decay for the moving average of batch_norm momentums.
     batch_norm_epsilon: small float added to variance to avoid dividing by zero.
-
   Yields:
     a arg_scope with the parameters needed for inception_v3.
   """

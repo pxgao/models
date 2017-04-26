@@ -13,7 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 """A library to train Inception using multiple replicas with synchronous update.
-
 Please see accompanying README.md for details and instructions.
 """
 from __future__ import absolute_import

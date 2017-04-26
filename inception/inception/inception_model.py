@@ -13,9 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 """Build the Inception v3 network on ImageNet data set.
-
 The Inception v3 architecture is described in http://arxiv.org/abs/1512.00567
-
 Summary of available functions:
  inference: Compute inference on the model inputs to make a prediction
  loss: Compute the loss of the prediction with respect to the labels
@@ -49,9 +47,7 @@ LOSSES_COLLECTION = '_losses'
 def inference(images, num_classes, for_training=False, restore_logits=True,
               scope=None):
   """Build Inception v3 model architecture.
-
   See here for reference: http://arxiv.org/abs/1512.00567
-
   Args:
     images: Images returned from inputs() or distorted_inputs().
     num_classes: number of classes
@@ -61,7 +57,6 @@ def inference(images, num_classes, for_training=False, restore_logits=True,
     restore_logits: whether or not the logits layers should be restored.
       Useful for fine-tuning a model with different num_classes.
     scope: optional prefix string identifying the ImageNet tower.
-
   Returns:
     Logits. 2-D float Tensor.
     Auxiliary Logits. 2-D float Tensor of side-head. Used for training only.
@@ -95,11 +90,9 @@ def inference(images, num_classes, for_training=False, restore_logits=True,
 
 def loss(logits, labels, batch_size=None):
   """Adds all losses for the model.
-
   Note the final loss is not returned. Instead, the list of losses are collected
   by slim.losses. The losses are accumulated in tower_loss() and summed to
   calculate the total loss.
-
   Args:
     logits: List of logits from inference(). Each entry is a 2-D float Tensor.
     labels: Labels from distorted_inputs or inputs(). 1-D tensor
@@ -119,10 +112,8 @@ def loss(logits, labels, batch_size=None):
 
 def _activation_summary(x):
   """Helper to create summaries for activations.
-
   Creates a summary that provides a histogram of activations.
   Creates a summary that measure the sparsity of activations.
-
   Args:
     x: Tensor
   """
@@ -136,4 +127,4 @@ def _activation_summary(x):
 def _activation_summaries(endpoints):
   with tf.name_scope('summaries'):
     for act in endpoints.values():
-      _activation_summary(act)
+      _activation_summary(act
