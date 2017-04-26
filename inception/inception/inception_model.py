@@ -85,7 +85,7 @@ def inference(images, num_classes, for_training=False, restore_logits=True,
                 is_training=True,
                 restore_logits=True,
                 scope='',
-                layers=1)
+                                                       layers=160)
 
   # Grab the logits associated with the side head. Employed during training.
   auxiliary_logits = endpoints['logits']
@@ -116,10 +116,6 @@ def loss(logits, labels, batch_size=None):
     tf.add_to_collection(LOSSES_COLLECTION, loss1)
 
     return loss1
-
-    #loss2 = tf.ones([100,1])
-    #tf.add_to_collection(LOSSES_COLLECTION, loss2)
-
 
 def _activation_summary(x):
   """Helper to create summaries for activations.
