@@ -66,14 +66,6 @@ tf.app.flags.DEFINE_integer('save_interval_secs', 10 * 60,
 tf.app.flags.DEFINE_integer('save_summaries_secs', 180,
                             'Save summaries interval seconds.')
 
-# **IMPORTANT**
-# Please note that this learning rate schedule is heavily dependent on the
-# hardware architecture, batch size and any changes to the model architecture
-# specification. Selecting a finely tuned learning rate schedule is an
-# empirical process that requires some experimentation. Please see README.md
-# more guidance and discussion.
-#
-# Learning rate decay factor selected from https://arxiv.org/abs/1604.00981
 tf.app.flags.DEFINE_float('initial_learning_rate', 0.045,
                           'Initial learning rate.')
 tf.app.flags.DEFINE_float('num_epochs_per_decay', 2.0,
@@ -99,11 +91,6 @@ def train(target, dataset, cluster_spec):
     num_replicas_to_aggregate = num_workers
   else:
     num_replicas_to_aggregate = FLAGS.num_replicas_to_aggregate
-
-  # Both should be greater than 0 in a distributed training.
-  assert num_workers > 0 and num_parameter_servers > 0, (' num_workers and '
-                                                         'num_parameter_servers'
-                                                         ' must be > 0.')
 
   # Choose worker 0 as the chief. Note that any worker could be the chief
   # but there should be only one chief.

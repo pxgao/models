@@ -111,7 +111,8 @@ def loss(logits, labels, batch_size=None):
 
   with tf.op_scope([logits, labels], 'random', 'Dummyloss'):
     #Create some tensor with an arbitrary loss function
-    loss1 = tf.ones([100,1])
+    #loss1 = tf.random_normal(0)
+    loss1 = tf.constant(1, dtype=tf.float32)
     tf.add_to_collection(LOSSES_COLLECTION, loss1)
 
     return loss1
