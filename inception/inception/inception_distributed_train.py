@@ -144,7 +144,6 @@ def train(target, dataset, cluster_spec):
 
       # Gather all of the losses including regularization losses.
       losses = tf.get_collection(slim.losses.LOSSES_COLLECTION)
-      tf.logging.info('LOSSES IS {}'.format(losses))
       total_loss = tf.add_n(losses, name='total_loss')
 
       # Create synchronous replica optimizer.
@@ -231,9 +230,7 @@ def train(target, dataset, cluster_spec):
       while not sv.should_stop():
         try:
           start_time = time.time()
-          #loss_value, step = sess.run([apply_gradients_op, global_step])
           loss_value, step = sess.run([train_op, global_step])
-          #assert not np.isnan(loss_value), 'Model diverged with loss = NaN'
           if step > FLAGS.max_steps:
             break
           duration = time.time() - start_time
