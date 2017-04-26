@@ -108,13 +108,16 @@ def loss(logits, labels, batch_size=None):
   """
   if not batch_size:
     batch_size = FLAGS.batch_size
-  
-  #Create some tensor with an arbitrary loss function
-  loss1 = tf.zeros([100,1])
-  tf.add_to_collection(LOSSES_COLLECTION, loss1)
 
-  loss2 = tf.ones([100,1])
-  tf.add_to_collection(LOSSES_COLLECTION, loss2)
+  with tf.op_scope([logits, labels], scope, 'Dummyloss'):
+    #Create some tensor with an arbitrary loss function
+    loss1 = tf.ones([100,1])
+    tf.add_to_collection(LOSSES_COLLECTION, loss1)
+
+    return loss1
+
+    #loss2 = tf.ones([100,1])
+    #tf.add_to_collection(LOSSES_COLLECTION, loss2)
 
 
 def _activation_summary(x):
