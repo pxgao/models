@@ -167,8 +167,6 @@ def train(target, dataset, cluster_spec):
 
       apply_gradients_op = opt.apply_gradients(grads, global_step=global_step)
 
-      # with tf.control_dependencies([apply_gradients_op]):
-      #  train_op = tf.identity(apply_gradients_op, name='train_op')
       #Ensures that all the gradients are applied before total loss is calculated
       with tf.control_dependencies([apply_gradients_op]):
         train_op = tf.identity(total_loss, name='train_op')
@@ -182,9 +180,6 @@ def train(target, dataset, cluster_spec):
 
       # Create a saver.
       saver = tf.train.Saver()
-
-      # Build the summary operation based on the TF collection of Summaries.
-      #summary_op = tf.merge_all_summaries()
 
       # Build an initialization operation to run below.
       init_op = tf.initialize_all_variables()
@@ -242,16 +237,6 @@ def train(target, dataset, cluster_spec):
             tf.logging.info(format_str %
                             (FLAGS.task_id, datetime.now(), step, loss_value,
                              examples_per_sec, duration))
-
-          # Determine if the summary_op should be run on the chief worker.
-          if is_chief and next_summary_time < time.time():
-            tf.logging.info('Running Summary operation on the chief.')
-            summary_str = sess.run(summary_op)
-            sv.summary_computed(sess, summary_str)
-            tf.logging.info('Finished running Summary operation.')
-
-            # Determine the next time for running the summary.
-            next_summary_time += FLAGS.save_summaries_secs
         except:
           if is_chief:
             tf.logging.info('About to execute sync_clean_up_op!')
