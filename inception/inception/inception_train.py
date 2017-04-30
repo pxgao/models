@@ -211,10 +211,10 @@ def train(dataset):
 
     # Override the number of preprocessing threads to account for the increased
     # number of GPU towers.
-    num_preprocess_threads = FLAGS.num_preprocess_threads * FLAGS.num_gpus
-    images, labels = image_processing.distorted_inputs(
-        dataset,
-        num_preprocess_threads=num_preprocess_threads)
+    #num_preprocess_threads = FLAGS.num_preprocess_threads * FLAGS.num_gpus
+    #images, labels = image_processing.distorted_inputs(
+    #    dataset,
+    #    num_preprocess_threads=num_preprocess_threads)
 
     input_summaries = copy.copy(tf.get_collection(tf.GraphKeys.SUMMARIES))
 
@@ -223,8 +223,8 @@ def train(dataset):
     num_classes = dataset.num_classes() + 1
 
      # Split the batch of images and labels for towers.
-    images_splits = tf.split(0, FLAGS.num_gpus, images)
-    labels_splits = tf.split(0, FLAGS.num_gpus, labels)
+    #images_splits = tf.split(0, FLAGS.num_gpus, images)
+    #labels_splits = tf.split(0, FLAGS.num_gpus, labels)
     
     #Always use constants as the image splits so avoid preprocessing time
     #images_splits = []
