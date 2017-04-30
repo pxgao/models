@@ -225,6 +225,9 @@ def train(dataset):
      # Split the batch of images and labels for towers.
     images_splits = tf.split(0, FLAGS.num_gpus, images)
     labels_splits = tf.split(0, FLAGS.num_gpus, labels)
+    
+    #Always use constants as the image splits so avoid preprocessing time
+    #images_splits = []
 
     # Calculate the gradients for each model tower.
     tower_grads = []
@@ -237,8 +240,17 @@ def train(dataset):
             # Calculate the loss for one tower of the ImageNet model. This
             # function constructs the entire ImageNet model but shares the
             # variables across all towers.
-            loss = _tower_loss(images_splits[i], labels_splits[i], num_classes,
+
+            image_shape = (FLAGS.batch_size, FLAGS.image_size, FLAGS.image_size, 3)
+            labels_shape = (FLAGS.batch_size)
+            images = tf.zeros(image_shape, dtype=tf.float32)
+            labels = tf.zeros(labels_shape, dtype=tf.int32)
+
+            loss = _tower_loss(images, labels, num_classes,
                                scope, reuse_variables)
+            
+            #loss = _tower_loss(images_splits[i], labels_splits[i], num_classes,
+            #                   scope, reuse_variables)
 
           # Reuse variables for the next tower.
           reuse_variables = True
@@ -328,14 +340,6 @@ def train(dataset):
 
     # Start the queue runners.
     tf.train.start_queue_runners(sess=sess)
-    #Allow time for the the queues to fill up with training examples
-    print('LOGGING WARNING: Starting the queue runner')
-    queue_size = sess.run("batch/fifo_queue_Size:0")
-    print('The current queue size is %.3f' % queue_size)
-    time.sleep(120)
-    queue_size = sess.run("batch/fifo_queue_Size:0")
-    print('LOGGING WARNING: Waking up after 60 seconds of filling in the queue')
-    print('The current queue size is %.3f' % queue_size)
 
     summary_writer = tf.train.SummaryWriter(
         FLAGS.train_dir,
