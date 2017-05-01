@@ -167,12 +167,12 @@ def train(target, dataset, cluster_spec):
 
         # Attach a scalar summmary to all individual losses and the total loss;
         # do the same for the averaged version of the losses.
-        for l in losses + [total_loss]:
-          loss_name = l.op.name
+        #for l in losses + [total_loss]:
+        #  loss_name = l.op.name
           # Name each loss as '(raw)' and name the moving average version of the
           # loss as the original loss name.
-          tf.scalar_summary(loss_name + ' (raw)', l)
-          tf.scalar_summary(loss_name, loss_averages.average(l))
+          #tf.scalar_summary(loss_name + ' (raw)', l)
+          #tf.scalar_summary(loss_name, loss_averages.average(l))
 
         # Add dependency to compute loss_averages.
         with tf.control_dependencies([loss_averages_op]):
@@ -190,8 +190,8 @@ def train(target, dataset, cluster_spec):
           tf.trainable_variables() + tf.moving_average_variables())
 
       # Add histograms for model variables.
-      for var in variables_to_average:
-        tf.histogram_summary(var.op.name, var)
+      #for var in variables_to_average:
+      #  tf.histogram_summary(var.op.name, var)
 
       # Create synchronous replica optimizer.
       opt = tf.train.SyncReplicasOptimizer(
@@ -213,9 +213,9 @@ def train(target, dataset, cluster_spec):
       grads = opt.compute_gradients(total_loss)
 
       # Add histograms for gradients.
-      for grad, var in grads:
-        if grad is not None:
-          tf.histogram_summary(var.op.name + '/gradients', grad)
+      #for grad, var in grads:
+      #  if grad is not None:
+      #    tf.histogram_summary(var.op.name + '/gradients', grad)
 
       apply_gradients_op = opt.apply_gradients(grads, global_step=global_step)
 
@@ -233,7 +233,7 @@ def train(target, dataset, cluster_spec):
       saver = tf.train.Saver()
 
       # Build the summary operation based on the TF collection of Summaries.
-      summary_op = tf.merge_all_summaries()
+      #summary_op = tf.merge_all_summaries()
 
       # Build an initialization operation to run below.
       init_op = tf.initialize_all_variables()
@@ -291,14 +291,14 @@ def train(target, dataset, cluster_spec):
                              examples_per_sec, duration))
 
           # Determine if the summary_op should be run on the chief worker.
-          if is_chief and next_summary_time < time.time():
-            tf.logging.info('Running Summary operation on the chief.')
-            summary_str = sess.run(summary_op)
-            sv.summary_computed(sess, summary_str)
-            tf.logging.info('Finished running Summary operation.')
+          #if is_chief and next_summary_time < time.time():
+          #  tf.logging.info('Running Summary operation on the chief.')
+          #  summary_str = sess.run(summary_op)
+          #  sv.summary_computed(sess, summary_str)
+          #  tf.logging.info('Finished running Summary operation.')
 
             # Determine the next time for running the summary.
-            next_summary_time += FLAGS.save_summaries_secs
+            #next_summary_time += FLAGS.save_summaries_secs
         except:
           if is_chief:
             tf.logging.info('About to execute sync_clean_up_op!')
