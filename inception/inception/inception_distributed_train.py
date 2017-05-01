@@ -140,11 +140,14 @@ def train(target, dataset, cluster_spec):
                                       RMSPROP_DECAY,
                                       momentum=RMSPROP_MOMENTUM,
                                       epsilon=RMSPROP_EPSILON)
-
-      images, labels = image_processing.distorted_inputs(
-          dataset,
-          batch_size=FLAGS.batch_size,
-          num_preprocess_threads=FLAGS.num_preprocess_threads)
+      image_shape = (FLAGS.batch_size, FLAGS.image_size, FLAGS.image_size, 3)
+      images = tf.zeros(image_shape, dtype=tf.float32)
+      labels_shape = (FLAGS.batch_size)
+      labels = tf.zeros(labels_shape, dtype=tf.int32)
+      #images, labels = image_processing.distorted_inputs(
+      #    dataset,
+      #    batch_size=FLAGS.batch_size,
+      #    num_preprocess_threads=FLAGS.num_preprocess_threads)
 
       # Number of classes in the Dataset label set plus 1.
       # Label 0 is reserved for an (unused) background class.
