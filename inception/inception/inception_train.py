@@ -124,21 +124,9 @@ def _tower_loss(images, labels, num_classes, scope, reuse_variables=None):
   loss_averages = tf.train.ExponentialMovingAverage(0.9, name='avg')
   loss_averages_op = loss_averages.apply(losses + [total_loss])
 
-  # Attach a scalar summmary to all individual losses and the total loss; do the
-  # same for the averaged version of the losses.
-  for l in losses + [total_loss]:
-    # Remove 'tower_[0-9]/' from the name in case this is a multi-GPU training
-    # session. This helps the clarity of presentation on TensorBoard.
-    loss_name = re.sub('%s_[0-9]*/' % inception.TOWER_NAME, '', l.op.name)
-    # Name each loss as '(raw)' and name the moving average version of the loss
-    # as the original loss name.
-    tf.scalar_summary(loss_name +' (raw)', l)
-    tf.scalar_summary(loss_name, loss_averages.average(l))
-
   with tf.control_dependencies([loss_averages_op]):
     total_loss = tf.identity(total_loss)
   return total_loss
-
 
 def _average_gradients(tower_grads):
   """Calculate the average gradient for each shared variable across all towers.
@@ -216,7 +204,7 @@ def train(dataset):
         dataset,
         num_preprocess_threads=num_preprocess_threads)
 
-    input_summaries = copy.copy(tf.get_collection(tf.GraphKeys.SUMMARIES))
+    #input_summaries = copy.copy(tf.get_collection(tf.GraphKeys.SUMMARIES))
 
     # Number of classes in the Dataset label set plus 1.
     # Label 0 is reserved for an (unused) background class.
@@ -242,11 +230,8 @@ def train(dataset):
 
           # Reuse variables for the next tower.
           reuse_variables = True
-
-          # Retain the summaries from the final tower.
-          summaries = tf.get_collection(tf.GraphKeys.SUMMARIES, scope)
-
-          # Retain the Batch Normalization updates operations only from the
+          
+                    # Retain the Batch Normalization updates operations only from the
           # final tower. Ideally, we should grab the updates from all towers
           # but these stats accumulate extremely fast so we can ignore the
           # other stats from the other towers without significant detriment.
@@ -264,24 +249,8 @@ def train(dataset):
     # synchronization point across all towers.
     grads = _average_gradients(tower_grads)
 
-    # Add a summaries for the input processing and global_step.
-    summaries.extend(input_summaries)
-
-    # Add a summary to track the learning rate.
-    summaries.append(tf.scalar_summary('learning_rate', lr))
-
-    # Add histograms for gradients.
-    for grad, var in grads:
-      if grad is not None:
-        summaries.append(
-            tf.histogram_summary(var.op.name + '/gradients', grad))
-
     # Apply the gradients to adjust the shared variables.
     apply_gradient_op = opt.apply_gradients(grads, global_step=global_step)
-
-    # Add histograms for trainable variables.
-    for var in tf.trainable_variables():
-      summaries.append(tf.histogram_summary(var.op.name, var))
 
     # Track the moving averages of all trainable variables.
     # Note that we maintain a "double-average" of the BatchNormalization
@@ -302,9 +271,6 @@ def train(dataset):
 
     # Create a saver.
     saver = tf.train.Saver(tf.all_variables())
-
-    # Build the summary operation from the last tower summaries.
-    summary_op = tf.merge_summary(summaries)
 
     # Build an initialization operation to run below.
     init = tf.initialize_all_variables()
@@ -328,19 +294,6 @@ def train(dataset):
 
     # Start the queue runners.
     tf.train.start_queue_runners(sess=sess)
-    #Allow time for the the queues to fill up with training examples
-    print('LOGGING WARNING: Starting the queue runner')
-    queue_size = sess.run("batch/fifo_queue_Size:0")
-    print('The current queue size is %.3f' % queue_size)
-    time.sleep(120)
-    queue_size = sess.run("batch/fifo_queue_Size:0")
-    print('LOGGING WARNING: Waking up after 60 seconds of filling in the queue')
-    print('The current queue size is %.3f' % queue_size)
-
-    summary_writer = tf.train.SummaryWriter(
-        FLAGS.train_dir,
-        graph_def=sess.graph.as_graph_def(add_shapes=True))
-
     for step in xrange(FLAGS.max_steps):
       start_time = time.time()
       _, loss_value = sess.run([train_op, loss])
@@ -354,11 +307,7 @@ def train(dataset):
       print(format_str % (datetime.now(), step, loss_value,
                             examples_per_sec, duration))
 
-      if step % 100 == 0:
-        summary_str = sess.run(summary_op)
-        summary_writer.add_summary(summary_str, step)
 
-      # Save the model checkpoint periodically.
       if step % 5000 == 0 or (step + 1) == FLAGS.max_steps:
         checkpoint_path = os.path.join(FLAGS.train_dir, 'model.ckpt')
         saver.save(sess, checkpoint_path, global_step=step)
