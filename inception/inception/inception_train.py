@@ -264,6 +264,14 @@ def train(dataset):
     # synchronization point across all towers.
     grads = _average_gradients(tower_grads)
 
+    variable_count = 0
+    trainable_variables = tf.trainable_variables()
+    for variable in trainable_variables:
+      variable_count += 1
+      tf.logging.info('Variable is {}'.format(variable))
+      tf.logging.info('Variable shape is {}'.format(tf.shape(variable)))
+    tf.logging.info('Total number of variables is {}'.format(variable_count))
+
     # Add a summaries for the input processing and global_step.
     summaries.extend(input_summaries)
 
@@ -328,15 +336,6 @@ def train(dataset):
 
     # Start the queue runners.
     tf.train.start_queue_runners(sess=sess)
-    #Allow time for the the queues to fill up with training examples
-    print('LOGGING WARNING: Starting the queue runner')
-    queue_size = sess.run("batch/fifo_queue_Size:0")
-    print('The current queue size is %.3f' % queue_size)
-    time.sleep(120)
-    queue_size = sess.run("batch/fifo_queue_Size:0")
-    print('LOGGING WARNING: Waking up after 60 seconds of filling in the queue')
-    print('The current queue size is %.3f' % queue_size)
-
     summary_writer = tf.train.SummaryWriter(
         FLAGS.train_dir,
         graph_def=sess.graph.as_graph_def(add_shapes=True))
