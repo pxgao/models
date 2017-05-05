@@ -260,28 +260,14 @@ def train(dataset):
           # Keep track of the gradients across all towers.
           tower_grads.append(grads)
 
+    tower_op1 = tf.identity(tower_grads)
+
     # We must calculate the mean of each gradient. Note that this is the
     # synchronization point across all towers.
-    grads = _average_gradients(tower_grads)
-
-    # Add a summaries for the input processing and global_step.
-    summaries.extend(input_summaries)
-
-    # Add a summary to track the learning rate.
-    summaries.append(tf.scalar_summary('learning_rate', lr))
-
-    # Add histograms for gradients.
-    for grad, var in grads:
-      if grad is not None:
-        summaries.append(
-            tf.histogram_summary(var.op.name + '/gradients', grad))
+    tower_op2 = _average_gradients(tower_grads)
 
     # Apply the gradients to adjust the shared variables.
-    apply_gradient_op = opt.apply_gradients(grads, global_step=global_step)
-
-    # Add histograms for trainable variables.
-    for var in tf.trainable_variables():
-      summaries.append(tf.histogram_summary(var.op.name, var))
+    apply_gradient_op = opt.apply_gradients(tower_op2, global_step=global_step)
 
     # Track the moving averages of all trainable variables.
     # Note that we maintain a "double-average" of the BatchNormalization
@@ -300,12 +286,6 @@ def train(dataset):
     train_op = tf.group(apply_gradient_op, variables_averages_op,
                         batchnorm_updates_op)
 
-    # Create a saver.
-    saver = tf.train.Saver(tf.all_variables())
-
-    # Build the summary operation from the last tower summaries.
-    summary_op = tf.merge_summary(summaries)
-
     # Build an initialization operation to run below.
     init = tf.initialize_all_variables()
 
@@ -317,48 +297,24 @@ def train(dataset):
         log_device_placement=FLAGS.log_device_placement))
     sess.run(init)
 
-    if FLAGS.pretrained_model_checkpoint_path:
-      assert tf.gfile.Exists(FLAGS.pretrained_model_checkpoint_path)
-      variables_to_restore = tf.get_collection(
-          slim.variables.VARIABLES_TO_RESTORE)
-      restorer = tf.train.Saver(variables_to_restore)
-      restorer.restore(sess, FLAGS.pretrained_model_checkpoint_path)
-      print('%s: Pre-trained model restored from %s' %
-            (datetime.now(), FLAGS.pretrained_model_checkpoint_path))
-
     # Start the queue runners.
     tf.train.start_queue_runners(sess=sess)
-    #Allow time for the the queues to fill up with training examples
-    print('LOGGING WARNING: Starting the queue runner')
-    queue_size = sess.run("batch/fifo_queue_Size:0")
-    print('The current queue size is %.3f' % queue_size)
-    time.sleep(120)
-    queue_size = sess.run("batch/fifo_queue_Size:0")
-    print('LOGGING WARNING: Waking up after 60 seconds of filling in the queue')
-    print('The current queue size is %.3f' % queue_size)
-
-    summary_writer = tf.train.SummaryWriter(
-        FLAGS.train_dir,
-        graph_def=sess.graph.as_graph_def(add_shapes=True))
 
     for step in xrange(FLAGS.max_steps):
+      overall_start = time.time()
+      sess.run(tower_op1)
       start_time = time.time()
-      _, loss_value = sess.run([train_op, loss])
-      duration = time.time() - start_time
+      sess.run(tower_op2)
+      agg_duration = time.time() - start_time
+      sess.run(apply_gradient_op)
+      sess.run(variables_averages_op)
+      sess.run(batchnorm_updates)
+      overall_duration = time.time() - overall_start
 
       assert not np.isnan(loss_value), 'Model diverged with loss = NaN'
 
       examples_per_sec = FLAGS.batch_size / float(duration)
-      format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
-                    'sec/batch)')
-      print(format_str % (datetime.now(), step, loss_value,
-                            examples_per_sec, duration))
-
-      if step % 100 == 0:
-        summary_str = sess.run(summary_op)
-        summary_writer.add_summary(summary_str, step)
-
-      # Save the model checkpoint periodically.
-      if step % 5000 == 0 or (step + 1) == FLAGS.max_steps:
-        checkpoint_path = os.path.join(FLAGS.train_dir, 'model.ckpt')
-        saver.save(sess, checkpoint_path, global_step=step)
+      format_str = ('%s: step %d, loss =  (%.1f examples/sec; %.3f '
+                    'sec/batch overall, %.3f sec/batch for ps agg)')
+      print(format_str % (datetime.now(), step,
+                            examples_per_sec, overall_duration, agg_duration))
