@@ -295,7 +295,9 @@ def train(dataset):
     # Start the queue runners.
     tf.train.start_queue_runners(sess=sess)
     for step in xrange(FLAGS.max_steps):
-      prun = sess.partial_run_setup([dummy_train0,tower_op2,dummy_train],[])
+      #prun = sess.partial_run_setup([tower_op2,dummy_train],[])
+      #Step 2b
+      prun = sess.partial_run_setup([dummy_train0,dummy_train],[])
       #prun = sess.partial_run_setup([image_wait_op,dummy_train0,tower_op2,dummy_train],[])
       overall_start = time.time()
       #sess.partial_run(prun, image_wait_op)
@@ -304,8 +306,8 @@ def train(dataset):
       sess.partial_run(prun, dummy_train0)
       gradient_duration = time.time() - dummy0_start
       agg_start = time.time()
-      sess.partial_run(prun, tower_op2)
-      agg_duration = time.time() - agg_start
+      #sess.partial_run(prun, tower_op2)
+      agg_duration = 0#time.time() - agg_start
       apply_grad_start = time.time()
       sess.partial_run(prun, dummy_train)
       apply_grad_duration = time.time() - apply_grad_start
