@@ -124,17 +124,6 @@ def _tower_loss(images, labels, num_classes, scope, reuse_variables=None):
   loss_averages = tf.train.ExponentialMovingAverage(0.9, name='avg')
   loss_averages_op = loss_averages.apply(losses + [total_loss])
 
-  # Attach a scalar summmary to all individual losses and the total loss; do the
-  # same for the averaged version of the losses.
-  for l in losses + [total_loss]:
-    # Remove 'tower_[0-9]/' from the name in case this is a multi-GPU training
-    # session. This helps the clarity of presentation on TensorBoard.
-    loss_name = re.sub('%s_[0-9]*/' % inception.TOWER_NAME, '', l.op.name)
-    # Name each loss as '(raw)' and name the moving average version of the loss
-    # as the original loss name.
-    tf.scalar_summary(loss_name +' (raw)', l)
-    tf.scalar_summary(loss_name, loss_averages.average(l))
-
   with tf.control_dependencies([loss_averages_op]):
     total_loss = tf.identity(total_loss)
   return total_loss
@@ -226,6 +215,9 @@ def train(dataset):
     images_splits = tf.split(0, FLAGS.num_gpus, images)
     labels_splits = tf.split(0, FLAGS.num_gpus, labels)
 
+    #with tf.control_dependencies([images_splits[0]]):
+    #  image_wait_op = tf.constant(0)
+
     # Calculate the gradients for each model tower.
     tower_grads = []
     reuse_variables = None
@@ -243,9 +235,6 @@ def train(dataset):
           # Reuse variables for the next tower.
           reuse_variables = True
 
-          # Retain the summaries from the final tower.
-          summaries = tf.get_collection(tf.GraphKeys.SUMMARIES, scope)
-
           # Retain the Batch Normalization updates operations only from the
           # final tower. Ideally, we should grab the updates from all towers
           # but these stats accumulate extremely fast so we can ignore the
@@ -260,7 +249,10 @@ def train(dataset):
           # Keep track of the gradients across all towers.
           tower_grads.append(grads)
 
-    tower_op1 = tf.identity(tower_grads)
+    gs = [g for g, _ in tower_grads[0]]
+    vs = [v for _, v in tower_grads[0]]
+    with tf.control_dependencies(gs):
+      dummy_train0 = tf.constant(0)
 
     # We must calculate the mean of each gradient. Note that this is the
     # synchronization point across all towers.
@@ -286,6 +278,9 @@ def train(dataset):
     train_op = tf.group(apply_gradient_op, variables_averages_op,
                         batchnorm_updates_op)
 
+    with tf.control_dependencies([train_op]):
+      dummy_train = tf.constant(0)
+
     # Build an initialization operation to run below.
     init = tf.initialize_all_variables()
 
@@ -299,22 +294,26 @@ def train(dataset):
 
     # Start the queue runners.
     tf.train.start_queue_runners(sess=sess)
-
     for step in xrange(FLAGS.max_steps):
+      prun = sess.partial_run_setup([dummy_train0,tower_op2,dummy_train],[])
+      #prun = sess.partial_run_setup([image_wait_op,dummy_train0,tower_op2,dummy_train],[])
       overall_start = time.time()
-      sess.run(tower_op1)
-      start_time = time.time()
-      sess.run(tower_op2)
-      agg_duration = time.time() - start_time
-      sess.run(apply_gradient_op)
-      sess.run(variables_averages_op)
-      sess.run(batchnorm_updates)
+      #sess.partial_run(prun, image_wait_op)
+      image_load_duration = 0#time.time() - overall_start
+      dummy0_start = time.time()
+      sess.partial_run(prun, dummy_train0)
+      gradient_duration = time.time() - dummy0_start
+      agg_start = time.time()
+      sess.partial_run(prun, tower_op2)
+      agg_duration = time.time() - agg_start
+      apply_grad_start = time.time()
+      sess.partial_run(prun, dummy_train)
+      apply_grad_duration = time.time() - apply_grad_start
       overall_duration = time.time() - overall_start
 
-      assert not np.isnan(loss_value), 'Model diverged with loss = NaN'
-
-      examples_per_sec = FLAGS.batch_size / float(duration)
+      examples_per_sec = FLAGS.batch_size / float(overall_duration)
       format_str = ('%s: step %d, loss =  (%.1f examples/sec; %.3f '
-                    'sec/batch overall, %.3f sec/batch for ps agg)')
+                    'sec/batch overall, %.3f for image load, %.3f sec/batch for gradient duration '
+                    '%.3f sec/batch for agg duration, %.3f for apply_grad duration)')
       print(format_str % (datetime.now(), step,
-                            examples_per_sec, overall_duration, agg_duration))
+                            examples_per_sec, overall_duration, image_load_duration, gradient_duration, agg_duration, apply_grad_duration))
