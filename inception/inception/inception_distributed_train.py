@@ -146,6 +146,9 @@ def train(target, dataset, cluster_spec):
           batch_size=FLAGS.batch_size,
           num_preprocess_threads=FLAGS.num_preprocess_threads)
 
+      with tf.control_dependencies([images[0]]):
+        image_processing_op = tf.constant(0)
+
       # Number of classes in the Dataset label set plus 1.
       # Label 0 is reserved for an (unused) background class.
       num_classes = dataset.num_classes() + 1
@@ -178,6 +181,9 @@ def train(target, dataset, cluster_spec):
         with tf.control_dependencies([loss_averages_op]):
           total_loss = tf.identity(total_loss)
 
+      with tf.control_dependencies([total_loss]):
+        loss_op = tf.constant(0)
+
       # Track the moving averages of all trainable variables.
       # Note that we maintain a 'double-average' of the BatchNormalization
       # global statistics.
@@ -208,6 +214,7 @@ def train(target, dataset, cluster_spec):
       # Add dependency to compute batchnorm_updates.
       with tf.control_dependencies([batchnorm_updates_op]):
         total_loss = tf.identity(total_loss)
+        batch_norm_op = tf.constant(0)
 
       # Compute gradients with respect to the loss.
       grads = opt.compute_gradients(total_loss)
@@ -274,21 +281,57 @@ def train(target, dataset, cluster_spec):
       # simultaneously in order to prevent running out of GPU memory.
       next_summary_time = time.time() + FLAGS.save_summaries_secs
       while not sv.should_stop():
+        prun = sess.partial_run_setup([image_preprocess_op, logits, loss_op, batch_norm_op, grads, apply_gradients_op, train_op], [])
         try:
-          start_time = time.time()
-          loss_value, step = sess.run([train_op, global_step])
-          assert not np.isnan(loss_value), 'Model diverged with loss = NaN'
-          if step > FLAGS.max_steps:
-            break
-          duration = time.time() - start_time
+          overall_start = time.time()
+          sess.partial_run(prun, image_preprocess_op)
+          image_preprocess_duration = time.time() - overall_start
+          
+          logits_start = time.time()
+          sess.partial_run(prun, logits)
+          logits_duration = time.time() - logits_start
 
-          if step % 30 == 0:
-            examples_per_sec = FLAGS.batch_size / float(duration)
-            format_str = ('Worker %d: %s: step %d, loss = %.2f'
-                          '(%.1f examples/sec; %.3f  sec/batch)')
-            tf.logging.info(format_str %
-                            (FLAGS.task_id, datetime.now(), step, loss_value,
-                             examples_per_sec, duration))
+          loss_start = time.time()
+          sess.partial_run(prun, loss_op)
+          loss_duration = time.time() - loss_start
+
+          batchnorm_start = time.time()
+          sess.partial_run(prun, batch_norm_op)
+          batchnorm_duration = time.time() - batchnorm_start
+          
+          gradient_compute_start = time.time()
+          sess.partial_run(prun, grads)
+          gradient_compute_duration = time.time() - gradient_compute_start
+
+          apply_gradient_start = time.time()
+          sess.partial_run(prun, apply_gradients_op)
+          apply_gradient_duration = time.time() - apply_gradient_start
+
+          train_op_start = time.time()
+          sess.partial_run(prun, train_op)
+          train_op_duration = time.time() - train_op_start
+
+          overall_duration = time.time() - overall_start
+
+          examples_per_sec = FLAGS.batch_size / float(duration)
+          format_str = ('Worker %d: %s: step %d'
+                        '(%.1f examples/sec; %.3f  sec/batch)'
+                        'Image Processing duration: %.3f, '
+                        'Logits duration: %.3f, '
+                        'Loss duration: %.3f, '
+                        'batch norm duration: %.3f, '
+                        'gradient compute duration: %.3f, '
+                        'apply gradient duration: %.3f, '
+                        'train op duration: %.3f'
+                        'overall_duration: %.3f')
+
+          tf.logging.info(format_str %
+                          (FLAGS.task_id, datetime.now(), step, 
+                           examples_per_sec, image_preprocess_duration,
+                           logits_duration, loss_duration, batchnorm_duration,
+                           gradient_compute_duration, apply_gradient_duration,
+                           train_op_duration, overall_duration
+                          ))
 
           # Determine if the summary_op should be run on the chief worker.
           if is_chief and next_summary_time < time.time():
