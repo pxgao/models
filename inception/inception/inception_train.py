@@ -215,8 +215,8 @@ def train(dataset):
     images_splits = tf.split(0, FLAGS.num_gpus, images)
     labels_splits = tf.split(0, FLAGS.num_gpus, labels)
 
-    #with tf.control_dependencies([images_splits[0]]):
-    #  image_wait_op = tf.constant(0)
+    with tf.control_dependencies([images_splits[0]]):
+      image_wait_op = tf.constant(0)
 
     # Calculate the gradients for each model tower.
     tower_grads = []
@@ -252,7 +252,7 @@ def train(dataset):
     gs = [g for g, _ in tower_grads[0]]
     vs = [v for _, v in tower_grads[0]]
     with tf.control_dependencies(gs):
-      dummy_train0 = tf.constant(0)
+      compute_gradient_op = tf.constant(0)
 
     # We must calculate the mean of each gradient. Note that this is the
     # synchronization point across all towers.
@@ -279,7 +279,7 @@ def train(dataset):
                         batchnorm_updates_op)
 
     with tf.control_dependencies([train_op]):
-      dummy_train = tf.constant(0)
+      agg_apply_train = tf.constant(0)
 
     # Build an initialization operation to run below.
     init = tf.initialize_all_variables()
@@ -295,27 +295,24 @@ def train(dataset):
     # Start the queue runners.
     tf.train.start_queue_runners(sess=sess)
     for step in xrange(FLAGS.max_steps):
-      #prun = sess.partial_run_setup([tower_op2,dummy_train],[])
-      #Step 2b
-      prun = sess.partial_run_setup([dummy_train0,dummy_train],[])
-      #prun = sess.partial_run_setup([image_wait_op,dummy_train0,tower_op2,dummy_train],[])
-      overall_start = time.time()
-      #sess.partial_run(prun, image_wait_op)
-      image_load_duration = 0#time.time() - overall_start
-      dummy0_start = time.time()
-      sess.partial_run(prun, dummy_train0)
-      gradient_duration = time.time() - dummy0_start
-      agg_start = time.time()
-      #sess.partial_run(prun, tower_op2)
-      agg_duration = 0#time.time() - agg_start
-      apply_grad_start = time.time()
-      sess.partial_run(prun, dummy_train)
-      apply_grad_duration = time.time() - apply_grad_start
-      overall_duration = time.time() - overall_start
+      prun = sess.partial_run_setup([image_wait_op,compute_gradient_op,agg_apply_train],[])
 
+      overall_start = time.time()
+      sess.partial_run(prun, image_wait_op)
+      image_load_duration = time.time() - overall_start
+
+      compute_start = time.time()
+      sess.partial_run(prun, compute_gradient_op)
+      compute_duration = time.time() - compute_start
+
+      agg_apply_start = time.time()
+      sess.partial_run(prun, agg_apply_train)
+      agg_apply_duration = time.time() - agg_apply_start
+
+      overall_duration = time.time() - overall_start
+      
       examples_per_sec = FLAGS.batch_size / float(overall_duration)
-      format_str = ('%s: step %d, loss =  (%.1f examples/sec; %.3f '
-                    'sec/batch overall, %.3f for image load, %.3f sec/batch for gradient duration '
-                    '%.3f sec/batch for agg duration, %.3f for apply_grad duration)')
-      print(format_str % (datetime.now(), step,
-                            examples_per_sec, overall_duration, image_load_duration, gradient_duration, agg_duration, apply_grad_duration))
+      format_str = ('%s: step %d, (%.1f examples/sec; %.3f '
+                    'sec/batch overall, %.3f for image load, %.3f sec/batch for computing gradient duration '
+                    '%.3f for aggregate and apply gradients)')
+      print(format_str % (datetime.now(), step, examples_per_sec, overall_duration, image_load_duration, compute_duration, agg_apply_duration))
