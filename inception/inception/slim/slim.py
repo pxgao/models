@@ -16,7 +16,7 @@
 # pylint: disable=unused-import
 
 # Collapse tf-slim into a single namespace.
-from inception.slim import inception_model as inception
+from inception.slim import alexnet_model as alexnet
 from inception.slim import losses
 from inception.slim import ops
 from inception.slim import scopes

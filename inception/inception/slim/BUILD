@@ -73,8 +73,8 @@ py_test(
 )
 
 py_library(
-    name = "inception",
-    srcs = ["inception_model.py"],
+    name = "alexnet",
+    srcs = ["alexnet_model.py"],
     deps = [
         ":ops",
         ":scopes",
@@ -86,7 +86,7 @@ py_test(
     size = "medium",
     srcs = ["inception_test.py"],
     deps = [
-        ":inception",
+        ":alexnet",
     ],
 )
 
@@ -94,7 +94,7 @@ py_library(
     name = "slim",
     srcs = ["slim.py"],
     deps = [
-        ":inception",
+        ":alexnet",
         ":losses",
         ":ops",
         ":scopes",

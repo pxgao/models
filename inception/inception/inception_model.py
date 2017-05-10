@@ -65,34 +65,13 @@ def inference(images, num_classes, for_training=False, restore_logits=True,
     Logits. 2-D float Tensor.
     Auxiliary Logits. 2-D float Tensor of side-head. Used for training only.
   """
-  # Parameters for BatchNorm.
-  batch_norm_params = {
-      # Decay for the moving averages.
-      'decay': BATCHNORM_MOVING_AVERAGE_DECAY,
-      # epsilon to prevent 0s in variance.
-      'epsilon': 0.001,
-  }
-  # Set weight_decay for weights in Conv and FC layers.
-  with slim.arg_scope([slim.ops.conv2d, slim.ops.fc], weight_decay=0.00004):
-    with slim.arg_scope([slim.ops.conv2d],
-                        stddev=0.1,
-                        activation=tf.nn.relu,
-                        batch_norm_params=batch_norm_params):
-      logits, endpoints = slim.inception.inception_v3(
-          images,
-          dropout_keep_prob=0.8,
-          num_classes=num_classes,
-          is_training=for_training,
-          restore_logits=restore_logits,
-          scope=scope)
 
-  # Add summaries for viewing model statistics on TensorBoard.
-  _activation_summaries(endpoints)
+  #Parameters are not tuned, but it should not matter too much for our purposes...
+  with slim.arg_scope(slim.alexnet.alexnet_v2_parameters()):
+    logits = slim.alexnet.alexnet_v2(images, is_training=True)
 
   # Grab the logits associated with the side head. Employed during training.
-  auxiliary_logits = endpoints['aux_logits']
-
-  return logits, auxiliary_logits
+  return logits
 
 
 def loss(logits, labels, batch_size=None):
@@ -122,6 +101,7 @@ def loss(logits, labels, batch_size=None):
                                     1.0, 0.0)
 
   # Cross entropy loss for the main softmax prediction.
+  #dense_labels
   slim.losses.cross_entropy_loss(logits[0],
                                  dense_labels,
                                  label_smoothing=0.1,
