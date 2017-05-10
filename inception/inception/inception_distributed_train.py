@@ -281,7 +281,7 @@ def train(target, dataset, cluster_spec):
       # simultaneously in order to prevent running out of GPU memory.
       next_summary_time = time.time() + FLAGS.save_summaries_secs
       while not sv.should_stop():
-        prun = sess.partial_run_setup([image_preprocess_op, logits, loss_op, batch_norm_op, grads, apply_gradients_op, train_op], [])
+        prun = sess.partial_run_setup([image_processing_op, logits, loss_op, batch_norm_op, grads, apply_gradients_op, train_op], [])
         try:
           overall_start = time.time()
           sess.partial_run(prun, image_preprocess_op)
